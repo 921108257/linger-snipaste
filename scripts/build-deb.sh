@@ -65,7 +65,7 @@ Comment=Linux 桌面的 Snipaste 风格截图标注工具
 Exec=/usr/bin/linger-snipaste
 Icon=linger-snipaste
 Terminal=false
-Categories=Graphics;Utility;
+Categories=Graphics;
 Keywords=screenshot;capture;annotate;snipaste;截图;
 StartupWMClass=linger-snipaste
 DESKTOP
