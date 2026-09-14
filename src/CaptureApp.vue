@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import { Crop, Pin, AppWindow, FolderOpen, X } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { rpc, native, type Shot } from "./lib/api";
 import CaptureOverlay from "./components/CaptureOverlay.vue";
 import PinWindow from "./components/PinWindow.vue";
+import SettingsPanel from "./components/SettingsPanel.vue";
+import type { Region } from "./lib/regions";
 import "./capture.css";
+import "./settings.css";
 const query = new URLSearchParams(location.search),
   overlayId = query.get("overlay"),
   pinId = query.get("pin");
@@ -19,6 +21,9 @@ const overlay = ref(false),
   file = ref<HTMLInputElement>(),
   result = ref("");
 let unlisten: undefined | (() => void);
+const regions = ref<Region[]>([]),
+  detecting = ref(false),
+  detectionError = ref("");
 async function start(interactive = false) {
   if (busy.value) return;
   busy.value = true;
@@ -35,9 +40,24 @@ async function start(interactive = false) {
   }
 }
 async function open(item: Shot) {
+  regions.value = [];
+  detectionError.value = "";
   shot.value = item;
   src.value = (await rpc<{ data: string }>("image", { id: item.id })).data;
   overlay.value = true;
+  if (native && item.auto_detect !== false) {
+    detecting.value = true;
+    rpc<Region[]>("detect_regions", { id: item.id })
+      .then((value) => {
+        if (shot.value?.id === item.id) regions.value = value;
+      })
+      .catch(() => {
+        detectionError.value = "区域识别暂不可用，请拖动框选。";
+      })
+      .finally(() => {
+        detecting.value = false;
+      });
+  }
 }
 async function close() {
   overlay.value = false;
@@ -74,17 +94,6 @@ async function clipboardPin() {
     error.value = String(e);
   }
 }
-function key(e: KeyboardEvent) {
-  if (overlay.value) return;
-  if (e.key === "F1") {
-    e.preventDefault();
-    start(e.shiftKey);
-  }
-  if (e.key === "F2") {
-    e.preventDefault();
-    clipboardPin();
-  }
-}
 onMounted(async () => {
   if (pinId) return;
   if (overlayId) {
@@ -100,7 +109,6 @@ onMounted(async () => {
     src.value = (await import("./assets/sample.svg")).default;
     overlay.value = true;
   }
-  window.addEventListener("keydown", key);
   if (native)
     unlisten = await listen<string>("capture-error", (event) => {
       error.value = event.payload;
@@ -109,7 +117,6 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   unlisten?.();
-  window.removeEventListener("keydown", key);
 });
 </script>
 <template>
@@ -118,38 +125,21 @@ onBeforeUnmount(() => {
     v-else-if="overlay"
     :src="src"
     :shot="shot"
+    :regions="regions"
+    :detecting="detecting"
+    :detection-error="detectionError"
     @close="close"
     @saved="result = '已完成截图'"
   />
-  <main v-else class="launcher">
-    <div class="launcher-brand">
-      <Crop :size="23" aria-hidden="true" /><span>Linger 截图</span>
-    </div>
-    <div class="launcher-actions">
-      <button class="primary" :disabled="busy" @click="start()">
-        <Crop :size="17" aria-hidden="true" />{{ busy ? "正在截图…" : "截图"
-        }}<kbd>F1</kbd>
-      </button>
-      <button class="secondary" :disabled="busy" @click="clipboardPin">
-        <Pin :size="17" aria-hidden="true" />贴图<kbd>F2</kbd>
-      </button>
-    </div>
-    <p class="launcher-status" role="status">
-      {{ busy ? "请完成系统截图确认…" : "就绪" }}
-    </p>
-    <div class="launcher-links">
-      <button :disabled="busy" @click="start(true)">
-        <AppWindow :size="14" aria-hidden="true" />系统窗口截图
-      </button>
-      <button @click="file?.click()">
-        <FolderOpen :size="14" aria-hidden="true" />打开图片
-      </button>
-      <button v-if="native" @click="getCurrentWindow().hide()">
-        <X :size="14" aria-hidden="true" />收起
-      </button>
-    </div>
-    <p v-if="error" class="launcher-error" role="alert">{{ error }}</p>
-    <p v-if="result" role="status">{{ result }}</p>
+  <template v-else>
+    <SettingsPanel
+      :error="error"
+      :busy="busy"
+      :result="result"
+      @capture="start()"
+      @pin="clipboardPin"
+      @import="file?.click()"
+    />
     <input
       ref="file"
       type="file"
@@ -158,5 +148,5 @@ onBeforeUnmount(() => {
       aria-label="打开图片"
       @change="importImage"
     />
-  </main>
+  </template>
 </template>

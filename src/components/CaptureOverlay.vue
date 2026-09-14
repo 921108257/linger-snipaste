@@ -23,7 +23,61 @@ import {
 import IconButton from "./IconButton.vue";
 import { rpc, native, type Shot } from "../lib/api";
 import { invoke } from "@tauri-apps/api/core";
-const props = defineProps<{ src: string; shot?: Shot }>();
+import { listen } from "@tauri-apps/api/event";
+import { regionsAt, type Region } from "../lib/regions";
+const props = defineProps<{
+  src: string;
+  shot?: Shot;
+  regions?: Region[];
+  detecting?: boolean;
+  detectionError?: string;
+}>();
+const hoverRegions = ref<Region[]>([]),
+  hoverIndex = ref(0);
+let clickedRegion: Region | undefined,
+  unlistenPin: undefined | (() => void),
+  disposed = false;
+const hoverRegion = computed(() => hoverRegions.value[hoverIndex.value]);
+function screenRegion(r: Region) {
+  return {
+    x: origin.x + r.x * imageWidth * scale,
+    y: origin.y + r.y * imageHeight * scale,
+    width: r.width * imageWidth * scale,
+    height: r.height * imageHeight * scale,
+  };
+}
+const hoverBox = computed(() => {
+  viewport.value;
+  return hoverRegion.value ? screenRegion(hoverRegion.value) : null;
+});
+function identify(p: { x: number; y: number }) {
+  const candidates = regionsAt(
+    props.regions || [],
+    (p.x - origin.x) / (imageWidth * scale),
+    (p.y - origin.y) / (imageHeight * scale),
+  );
+  if (JSON.stringify(candidates) !== JSON.stringify(hoverRegions.value))
+    hoverIndex.value = 0;
+  hoverRegions.value = candidates;
+}
+function cycleRegion(e: WheelEvent) {
+  if (selection.value || dragging.value || !hoverRegions.value.length) return;
+  e.preventDefault();
+  hoverIndex.value = Math.max(
+    0,
+    Math.min(
+      hoverRegions.value.length - 1,
+      hoverIndex.value + (e.deltaY > 0 ? 1 : -1),
+    ),
+  );
+}
+watch(
+  () => props.regions,
+  () => {
+    if (ready.value && !selection.value && !dragging.value)
+      identify(cursor.value);
+  },
+);
 const emit = defineEmits<{ close: []; saved: [Shot] }>();
 const host = ref<HTMLDivElement>(),
   toolbar = ref<HTMLDivElement>(),
@@ -131,7 +185,10 @@ const handles = computed(() =>
 function textAppearance() {
   return {
     color: editingText ? String(editingText.fill()) : color.value,
-    fontSize: (editingText ? editingText.fontSize() * editingText.scaleY() * scale : 22) + 'px',
+    fontSize:
+      (editingText
+        ? editingText.fontSize() * editingText.scaleY() * scale
+        : 22) + "px",
   };
 }
 watch(toolbar, (element) => {
@@ -347,6 +404,8 @@ function begin(e: PointerEvent) {
   if (tool.value === "select" && !target.closest(".selection-box")) {
     transform.nodes([]);
     anchor = p;
+    identify(p);
+    clickedRegion = hoverRegion.value;
     selection.value = null;
     dragging.value = true;
   }
@@ -355,6 +414,7 @@ function move(e: PointerEvent) {
   const p = point(e);
   cursor.value = p;
   if (!ready.value) return;
+  if (!selection.value && !dragging.value) identify(p);
   const r = selection.value;
   canvasCursor.value =
     r &&
@@ -463,8 +523,14 @@ function end() {
       selection.value.width < 3 ||
       selection.value.height < 3
     ) {
-      selectAll();
-      return;
+      selection.value = clickedRegion
+        ? screenRegion(clickedRegion)
+        : {
+            x: origin.x,
+            y: origin.y,
+            width: imageWidth * scale,
+            height: imageHeight * scale,
+          };
     }
     annotations.destroyChildren();
     annotations.clip(pixelSelection.value!);
@@ -610,7 +676,11 @@ function key(e: KeyboardEvent) {
   }
   if (e.key === "Enter") {
     e.preventDefault();
-    selection.value ? finish("copy") : selectAll();
+    if (selection.value) finish("copy");
+    else if (hoverRegion.value) {
+      selection.value = screenRegion(hoverRegion.value);
+      annotations.clip(pixelSelection.value!);
+    } else selectAll();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === "a") {
     e.preventDefault();
@@ -682,7 +752,13 @@ function resize() {
     };
     stage.scale({ x: scale, y: scale });
     stage.position(origin);
-    if (previous) selection.value = {x: origin.x + previous.x*scale, y: origin.y + previous.y*scale, width: previous.width*scale, height: previous.height*scale};
+    if (previous)
+      selection.value = {
+        x: origin.x + previous.x * scale,
+        y: origin.y + previous.y * scale,
+        width: previous.width * scale,
+        height: previous.height * scale,
+      };
   }
 }
 onMounted(() => {
@@ -748,6 +824,13 @@ onMounted(() => {
     ready.value = true;
     cursor.value = { ...origin };
     if (native) await invoke("overlay_ready");
+    if (native) {
+      const stop = await listen("pin-selection", () => {
+        if (selection.value && !busy.value) finish("pin");
+      });
+      if (disposed) stop();
+      else unlistenPin = stop;
+    }
   };
   image.src = props.src;
   image.onerror = () => {
@@ -761,6 +844,8 @@ onMounted(() => {
   window.addEventListener("pointerup", end);
 });
 onBeforeUnmount(() => {
+  disposed = true;
+  unlistenPin?.();
   observer.disconnect();
   toolbarObserver?.disconnect();
   stage.destroy();
@@ -778,6 +863,7 @@ onBeforeUnmount(() => {
     @pointerdown="begin"
     @dblclick="editTextAt"
     @contextmenu.prevent="emit('close')"
+    @wheel="cycleRegion"
   >
     <div
       ref="host"
@@ -785,7 +871,29 @@ onBeforeUnmount(() => {
       role="img"
       aria-label="冻结的屏幕画面"
     ></div>
-    <div v-if="!selection" class="capture-dim"></div>
+    <div v-if="!selection && !hoverBox" class="capture-dim"></div>
+    <div
+      v-if="!selection && hoverBox && !dragging"
+      class="hover-region"
+      :style="{
+        left: hoverBox.x + 'px',
+        top: hoverBox.y + 'px',
+        width: hoverBox.width + 'px',
+        height: hoverBox.height + 'px',
+      }"
+    >
+      <span :style="{ top: hoverBox.y < 36 ? '6px' : '-29px' }"
+        >{{ Math.round(hoverRegion!.width * imageWidth) }} ×
+        {{ Math.round(hoverRegion!.height * imageHeight) }} ·
+        {{ hoverIndex + 1 }}/{{ hoverRegions.length }}</span
+      >
+    </div>
+    <p
+      v-if="!selection && ready && (detecting || detectionError)"
+      class="detection-help"
+    >
+      {{ detecting ? "正在识别容器区域…" : detectionError }}
+    </p>
     <template v-if="selection">
       <div
         class="selection-box"

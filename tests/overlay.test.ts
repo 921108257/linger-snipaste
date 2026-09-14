@@ -89,6 +89,47 @@ afterEach(() => {
 });
 
 describe("screenshot interaction", () => {
+  it("hovers nested containers, cycles to a parent, and exports the clicked container", async () => {
+    wrapper.unmount();
+    wrapper = mount(CaptureOverlay, {
+      props: {
+        src: source,
+        regions: [
+          { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+          { x: 0.2, y: 0.2, width: 0.3, height: 0.4 },
+        ],
+      },
+      attachTo: document.body,
+    });
+    await vi.waitFor(() =>
+      expect(wrapper.find(".capture-crosshair").exists()).toBe(true),
+    );
+    stage = Konva.stages[Konva.stages.length - 1];
+    pointer(window, "pointermove", 360, 228);
+    await nextTick();
+    expect(
+      (wrapper.get(".hover-region").element as HTMLElement).style.width,
+    ).toBe("360px");
+    await wrapper.get(".capture-overlay").trigger("wheel", { deltaY: 100 });
+    expect(
+      (wrapper.get(".hover-region").element as HTMLElement).style.width,
+    ).toBe("960px");
+    await wrapper.get(".capture-overlay").trigger("wheel", { deltaY: -100 });
+    await drag(360, 228, 360, 228);
+    expect(box()).toEqual([240, 152, 360, 304]);
+    const out = await exported();
+    expect([out.width, out.height]).toEqual([360, 304]);
+    expect([...out.getContext("2d").getImageData(0, 0, 1, 1).data]).toEqual([
+      48, 96, 144, 255,
+    ]);
+  });
+  it("manual dragging overrides container snapping", async () => {
+    await wrapper.setProps({
+      regions: [{ x: 0.1, y: 0.1, width: 0.8, height: 0.8 }],
+    });
+    await drag(900, 600, 1100, 700);
+    expect(box()).toEqual([900, 600, 200, 100]);
+  });
   it("moves the crop and resizes all eight handles", async () => {
     expect(box()).toEqual([100, 100, 700, 400]);
     await drag(400, 300, 450, 330);

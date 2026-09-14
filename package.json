@@ -1,6 +1,6 @@
 {
   "name": "linger-snipaste",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "desktop": "tauri dev",
     "desktop:build": "tauri build --no-bundle",
-    "test": "/usr/bin/python3 -m unittest discover -s tests -v && vitest run",
+    "test": "PYTHONPATH=dist-deb/runtime /usr/bin/python3 -m unittest discover -s tests -v && vitest run",
     "test:ui": "vitest run"
   },
   "dependencies": {

@@ -36,6 +36,9 @@ class FakeBus:
 
 class CoreTests(unittest.TestCase):
     def setUp(self):
+        desktop = patch.dict(os.environ, {'XDG_CURRENT_DESKTOP': 'test'})
+        desktop.start()
+        self.addCleanup(desktop.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.store = Store(self.temp.name)
         image = Image.new('RGB', (100, 80), '#306090')
@@ -98,6 +101,33 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(ServiceError): cap.screenshot()
         self.assertEqual(cap.state, 'ready')
         self.assertTrue(bus.removed and bus.closed)
+
+    @patch.dict(os.environ, {'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME'})
+    @patch('capture.GLib.idle_add', side_effect=lambda callback: callback())
+    @patch('capture.dbus.Interface', side_effect=lambda proxy, interface: proxy)
+    def test_gnome_uses_interactive_portal_for_background_capture(self, *_):
+        file = Path(self.temp.name) / 'portal.png'; file.write_bytes(self.png)
+        bus = FakeBus(file.as_uri())
+        Capture(self.store, bus).screenshot()
+        self.assertTrue(bus.options['interactive'])
+
+    @patch('capture.GLib.idle_add', side_effect=lambda callback: callback())
+    @patch('capture.dbus.Interface', side_effect=lambda proxy, interface: proxy)
+    def test_noninteractive_failure_retries_once_but_cancel_never_retries(self, *_):
+        file = Path(self.temp.name) / 'portal.png'; file.write_bytes(self.png)
+        bus = FakeBus(file.as_uri(), code=2)
+        original = bus.Screenshot
+        attempts = []
+        def request(parent, options):
+            attempts.append(bool(options['interactive']))
+            if options['interactive']: bus.code = 0
+            return original(parent, options)
+        bus.Screenshot = request
+        Capture(self.store, bus).screenshot()
+        self.assertEqual(attempts, [False, True])
+        attempts.clear(); bus.code = 1
+        with self.assertRaises(ServiceError): Capture(self.store, bus).screenshot()
+        self.assertEqual(attempts, [False])
 
     def test_private_worker_status_rejects_old_commands_and_exits_on_eof(self):
         worker = Path(__file__).resolve().parents[1] / 'service/daemon.py'

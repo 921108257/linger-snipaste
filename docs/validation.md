@@ -1,21 +1,29 @@
-# 验证记录
+# v0.3.0 验证记录
 
-2026-09-14，Ubuntu GNOME Wayland。
+2026-09-15，Ubuntu 24.04 / GNOME Wayland。
 
-- 后端 8 项测试：PNG 存储与哈希、ID 路径约束、无效图像拒绝、本地 Portal URI 验证、每次截图读取新结果、取消与失败清理、私有子进程拒绝旧命令且随 stdin EOF 退出。
-- Vue 组件 4 项测试：选区拖动与八向缩放；文字自动选中、拖动、控制点缩放、双击修改与撤销；导出只含选区像素；橡皮擦只擦除标注且可撤销。
-- 组件测试在 jsdom 中派发 DOM 鼠标/指针事件，Konva 使用真实 Canvas 栅格化；不等同于原生 WebKit 或浏览器实机手势验证。
-- 700×400 导出逐像素检查通过，不含遮罩、边框、控制点或工具栏。橡皮擦路径处恢复原图 RGB 与完整 alpha，路径外保留画笔颜色。
-- 本版已移除常驻共享、旧帧缓存和对外截图接口，之前对旧版采集链路的验证不能作为本版实机验证。
-- 最终 `npm test`、`npm run build`、`cargo build --manifest-path src-tauri/Cargo.toml --features tauri/custom-protocol` 均通过。重新注册 F1 时保留了其他已有绑定。
+## 截图故障证据
 
-Web Interface Guidelines 复核：
+系统日志在旧版失败时记录 `Only the focused app is allowed to show a system access dialog`。旧版先隐藏窗口，然后使用无父窗口的 Python 子进程发起非交互 Screenshot Portal，请求被 GNOME 拒绝。
 
-- `src/components/IconButton.vue`：按钮名称、工具提示、按下状态、焦点状态通过。
-- `src/components/CaptureOverlay.vue`：输入名称与焦点、输入法组合键保护、方向键移动对象/选区、Ctrl+A 全屏、Enter 完成、Esc 退出、错误提示已检查；绘图与八向缩放仍需指针输入。
-- `src/components/PinWindow.vue`：图片 alt / 尺寸、缩放按钮、透明度输入标签、快捷键通过。
-- `src/capture.css`：工具栏按实际尺寸定位、22px 选区命中区域、焦点状态、长错误换行已检查。
+新版 GNOME 使用交互 Screenshot Portal；非 GNOME 后端失败时仅重试一次交互模式。取消不重试、不弹错误窗口。安装包补上遗漏的 `_dbus_bindings`、`_dbus_glib_bindings`，同时声明 GTK 类型库和 Portal 后端依赖。
 
-本次浏览器控制工具返回 `Codex auth token is unavailable`，因此未完成桌面/移动视口截图复核，也未完成新版 GNOME Screenshot Portal 的人工确认、窗口模式和 F1 实机闭环。后端 Portal 成功/取消测试使用替身，不宣称真实系统截图已通过。
+## 自动验证
 
-未验证：KDE/X11、多显示器、分数缩放、全局 F2、自包含安装包。全局快捷键仅注册 F1。
+- Python 14 项：存储、URI 与路径约束、Portal 成功/失败/取消清理、GNOME 交互选择、非交互失败重试、私有进程退出、普通及双倍分辨率嵌套容器、纯色图、快捷键持久化和冲突保护、写入失败时回滚、非法快捷键。
+- Vue/TypeScript 8 项：选区移动与八向缩放、文字编辑与撤销、橡皮擦、像素导出、容器悬停与滚轮切换、手动框选优先、归一化命中与非法边界过滤。
+- 700×400 普通裁剪逐像素一致；容器单击导出 360×304，边框、遮罩与工具栏不进入图片。
+- 用户提供的旧界面截图识别出 6 个区域，包括内容容器和两个按钮区域，耗时约 30 ms。
+- `npm test`、`npm run build` 和 Rust release 构建通过。
+- `scripts/check-package.py` 使用 Python `-S` 禁用系统 site-packages，检查依赖确实来自安装包的 vendor，验证 OpenCV、GTK 导入及打包后端的状态/设置/私有协议。
+- 安装包私有依赖与后端检查通过；`apt-get -s install` 确认可从 v0.2.0 升级到 v0.3.0，依赖可满足。没有直接修改本机已安装的旧版本。
+
+## 浏览器验证
+
+使用真实浏览器检查设置页；录入 Ctrl+Shift+F9 并保存，成功状态与禁用的保存按钮均正确。660×700 与 390×844 视口无横向溢出或控件重叠。
+
+## 尚未验证
+
+本次发起了真实系统截图请求，但系统确认未在 120 秒内完成，返回超时；不能把 Portal 替身测试视为真实截图成功。当前工具不能控制 GNOME 原生截图界面。安装后的系统确认、全局快捷键物理按键以及贴图仍需桌面端操作验证。
+
+未验证 KDE/X11、多屏、分数缩放。识别依赖可见边界，不保证所有应用的内部元素都能被识别。
