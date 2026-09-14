@@ -17,6 +17,8 @@
 - `npm test`、`npm run build` 和 Rust release 构建通过。
 - `scripts/check-package.py` 使用 Python `-S` 禁用系统 site-packages，检查依赖确实来自安装包的 vendor，验证 OpenCV、GTK 导入及打包后端的状态/设置/私有协议。
 - 安装包私有依赖与后端检查通过；`apt-get -s install` 确认可从 v0.2.0 升级到 v0.3.0，依赖可满足。没有直接修改本机已安装的旧版本。
+- 在独立 D-Bus 会话和临时配置目录中运行打包后的原生程序，后台进程保持运行并成功初始化设置。该测试不代表真实系统截图完成。
+- 发布目录改为 `dist-deb/releases/`，前端 `dist/` 不再混入安装包，避免重复构建递归嵌入旧产物。严格 Rust Clippy 检查通过。
 
 ## 浏览器验证
 

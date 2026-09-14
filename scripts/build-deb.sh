@@ -11,7 +11,9 @@ BUILD="$ROOT/dist-deb"
 PKG="$BUILD/linger-snipaste_${VERSION}_amd64"
 BIN_SRC="$ROOT/src-tauri/target/release/linger-snipaste"
 PY_DIST=/usr/lib/python3/dist-packages
-OUT="$ROOT/dist/linger-snipaste_${VERSION}_amd64.deb"
+# Tauri embeds every file in dist/. Never put release archives there: the
+# next cargo build would recursively embed previous installers in the binary.
+OUT="$BUILD/releases/linger-snipaste_${VERSION}_amd64.deb"
 
 fail() { echo "错误：$*" >&2; exit 1; }
 

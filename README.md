@@ -54,11 +54,13 @@ sudo apt install ./linger-snipaste_0.3.0_amd64.deb
 npm install && npm run build
 python3 -m pip install --target dist-deb/runtime -r service/requirements.txt
 cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/custom-protocol
-./scripts/build-deb.sh          # 产物：dist/linger-snipaste_0.3.0_amd64.deb
+./scripts/build-deb.sh          # 产物：dist-deb/releases/linger-snipaste_0.3.0_amd64.deb
 /usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.3.0_amd64
 ```
 
 包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制及 Python 扩展真实链接关系推导。包内扩展锁定 Python 3.12（Ubuntu 24.04 默认版本）。构建识别依赖也需使用 Python 3.12；没有 pip 时先安装 `python3-pip`。
+
+`dist/` 仅放前端资源，会被 Tauri 嵌入程序；不要把安装包复制到此目录。安装包输出到 `dist-deb/releases/`，避免后续构建递归嵌入旧安装包。
 
 ### 从源码运行
 
