@@ -9,7 +9,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--remove', action='store_true')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
-binary = root / 'src-tauri/target/debug/linger-snipaste'
+launcher = Path('/usr/bin/linger-snipaste')
+binary = next((path for path in (
+    launcher,
+    root / 'src-tauri/target/release/linger-snipaste',
+    root / 'src-tauri/target/debug/linger-snipaste',
+) if path.exists()), launcher)
 binding_path = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/linger-snipaste/'
 settings = Gio.Settings.new('org.gnome.settings-daemon.plugins.media-keys')
 paths = list(settings.get_strv('custom-keybindings'))

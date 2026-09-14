@@ -23,6 +23,34 @@ GNOME Wayland 限制普通应用直接读取其他窗口。应用通过系统 Sc
 
 ## 运行与构建
 
+### 安装 .deb（推荐）
+
+从 [Releases](https://github.com/921108257/linger-snipaste/releases) 下载后：
+
+```bash
+sudo apt install ./linger-snipaste_0.2.0_amd64.deb
+```
+
+包内已附带 Python 后端及其依赖（`gi` / `dbus` / `PIL` / `cairo`），无需安装 `python3-gi` 等系统 Python 包；GTK 与 WebKitGTK 等系统库由 `apt` 依据 `Depends` 自动补齐。安装后应用随会话自启动并常驻托盘，按 F1 截图。
+
+注册 GNOME 全局 F1（以桌面用户身份执行一次）：
+
+```bash
+/usr/lib/linger-snipaste/install-shortcut.py
+```
+
+自行打包：
+
+```bash
+npm install && npm run build
+cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/custom-protocol
+./scripts/build-deb.sh          # 产物：dist/linger-snipaste_0.2.0_amd64.deb
+```
+
+包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制真实链接关系推导，新增系统库依赖会自动体现。包内 `gi` / `PIL` 含 `cpython-312` 扩展，因此锁定 Python 3.12（Ubuntu 24.04 默认版本）。
+
+### 从源码运行
+
 需要 Node.js 22+、Rust，以及系统桌面库：
 
 ```bash
@@ -56,6 +84,6 @@ npm run desktop:build # 原生构建，不生成安装包
 - 选区接近全屏时工具栏会浮在画面边缘；可编辑的截图尺寸不会缩小，导出不含工具栏。
 - 贴图支持缩放与透明度；是否允许置顶取决于窗口管理器。
 - 原图和编辑副本保存在 `${XDG_DATA_HOME:-~/.local/share}/linger-snipaste`，尚无自动清理策略。马赛克可被橡皮擦恢复为原图，请留意本地原始副本。
-- 尚未制作自包含安装包。当前依赖系统 Python / GTK / D-Bus，已不依赖 GStreamer 采集。
+- 已提供自包含 `.deb`：二进制与 Python 依赖随包分发，系统 C 库经 `Depends` 由 `apt` 安装。当前仅打包 Ubuntu 24.04 / amd64，包内 Python 扩展锁定 3.12。
 
 详细验证范围见 [docs/validation.md](docs/validation.md)。
