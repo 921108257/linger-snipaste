@@ -1,0 +1,275 @@
+@font-face {
+  font-family: Ubuntu;
+  src: local("Ubuntu Sans"), local("Ubuntu");
+  font-display: swap;
+}
+:root {
+  font-family: Ubuntu, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  color: #283445;
+  background: #eef1f5;
+  font-synthesis: none;
+  --accent: #465bd8;
+  --text: #283445;
+  --muted: #647185;
+  --border: #e3e7ed;
+  --surface: #fff;
+  --canvas: #eef1f5;
+  color-scheme: light;
+  font-size: 13px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: #465bd820;
+}
+button {
+  cursor: pointer;
+}
+button,
+a {
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+button {
+  color: inherit;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+button svg {
+  flex-shrink: 0;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #465bd878;
+  outline-offset: 3px;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+h1 {
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 1.5;
+}
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+h3 {
+  font-size: 12px;
+  font-weight: 500;
+}
+p {
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 3px 5px;
+  background: #f4f5f8;
+  border: 1px solid #e3e7ee;
+  border-radius: 4px;
+  color: #7c8595;
+  font-weight: 400;
+}
+pre,
+code {
+  font-family: "Ubuntu Mono", "DejaVu Sans Mono", monospace;
+}
+pre {
+  margin: 0;
+  overflow: auto;
+}
+input {
+  min-width: 0;
+}
+input[type="search"],
+input[type="text"],
+input[type="number"],
+input:not([type]) {
+  color: var(--text);
+}
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 10px 16px;
+  font-weight: 500;
+  box-shadow: 0 2px 3px #2f45b50c;
+}
+button.primary:hover:not(:disabled) {
+  background: #384cc5;
+  border-color: #384cc5;
+}
+.primary kbd {
+  background: #ffffff15;
+  border-color: #ffffff25;
+  color: #e1e5ff;
+}
+.secondary {
+  background: #fff;
+  border: 1px solid #dce1e9;
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-weight: 500;
+}
+.secondary:hover:not(:disabled) {
+  background: #f3f5fa;
+  border-color: #bdc6d6;
+}
+.compact {
+  padding: 7px 10px !important;
+  font-size: 12px;
+}
+.icon-button {
+  border: 0;
+  background: transparent;
+  border-radius: 5px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+  color: #707d8f;
+}
+.icon-button:hover:not(:disabled) {
+  background: #e7ebf4;
+  color: #3044b3;
+}
+.icon-button.active {
+  background: #e8ecfc;
+  color: #465bd8;
+}
+.plain-button {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 12px;
+}
+.plain-button:hover {
+  color: #263ca7;
+  text-decoration: underline;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 21px;
+  background: var(--border);
+  margin: 0 9px;
+}
+
+.visually-hidden {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: #8b969c;
+  border-radius: 50%;
+}
+.pin-surface {
+  height: 100dvh;
+  background: #202326;
+  color: #edf1f5;
+  display: flex;
+  flex-direction: column;
+}
+.pin-toolbar {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px;
+  background: #2b3036;
+  z-index: 1;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.pin-toolbar .icon-button {
+  color: #d7e0e7;
+}
+.pin-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}
+.pin-toolbar input {
+  width: 60px;
+  accent-color: #65c2b7;
+}
+.pin-image-scroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.pin-image-scroll img {
+  max-width: none;
+  flex-shrink: 0;
+  display: block;
+}
+.pin-surface > p {
+  padding: 10px;
+  color: #ffc4c4;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

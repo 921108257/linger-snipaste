@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<rect width="1200" height="760" fill="#dce7e9"/>
+<rect x="65" y="50" width="1070" height="660" rx="14" fill="#fff"/>
+<path d="M79 50h1042a14 14 0 0 1 14 14v36H65V64a14 14 0 0 1 14-14" fill="#f5f7f8"/>
+<g fill="#c5ced5"><circle cx="90" cy="75" r="5"/><circle cx="108" cy="75" r="5"/><circle cx="126" cy="75" r="5"/></g>
+<rect x="404" y="61" width="392" height="28" rx="6" fill="#e9edef"/><text x="600" y="80" font-family="sans-serif" font-size="13" text-anchor="middle" fill="#687980">studio.local / projects</text>
+<g font-family="sans-serif" fill="#263c44"><text x="118" y="153" font-size="24" font-weight="600">Fieldnotes</text><text x="771" y="150" font-size="15">Work</text><text x="849" y="150" font-size="15">About</text><text x="933" y="150" font-size="15">Contact</text></g>
+<path d="M117 180h963" stroke="#e3e8e8"/>
+<text x="118" y="253" font-family="sans-serif" font-size="15" fill="#536e72">A small collection of things we care about.</text>
+<text x="114" y="320" font-family="serif" font-size="62" fill="#284d4d">Made to be noticed.</text>
+<g transform="translate(117 364)"><rect width="464" height="248" rx="7" fill="#b8d4cc"/><path d="M0 200Q90 68 199 155T464 107v141H0" fill="#94b9aa"/><path d="M0 232Q150 149 302 207t162-11v52H0" fill="#639984"/><ellipse cx="330" cy="61" rx="31" ry="31" fill="#f3e9bd"/><rect x="148" y="50" width="133" height="158" rx="5" fill="#f2f1e6" transform="rotate(-8 214 129)"/><text x="166" y="92" font-family="serif" font-size="19" fill="#406b5b" transform="rotate(-8 214 129)">Outside,</text><text x="166" y="115" font-family="serif" font-size="19" fill="#406b5b" transform="rotate(-8 214 129)">together.</text><path d="M180 172q40-70 60 1" fill="none" stroke="#719583" stroke-width="3"/></g>
+<g transform="translate(607 364)"><rect width="472" height="248" rx="7" fill="#e4def2"/><circle cx="235" cy="123" r="82" fill="#a99ecb"/><rect x="162" y="63" width="162" height="126" rx="8" fill="#f4f0fd" transform="rotate(12 242 126)"/><text x="189" y="112" font-family="sans-serif" font-size="22" font-weight="bold" fill="#746197" transform="rotate(12 242 126)">a little</text><text x="189" y="139" font-family="sans-serif" font-size="22" font-weight="bold" fill="#746197" transform="rotate(12 242 126)">headspace.</text></g>
+<g font-family="sans-serif" fill="#334b50"><text x="118" y="644" font-size="18">Outside, together</text><text x="608" y="644" font-size="18">A little headspace</text><text x="118" y="670" font-size="13" fill="#788b90">Identity &amp; art direction</text><text x="608" y="670" font-size="13" fill="#788b90">Digital experience</text></g>
+</svg>

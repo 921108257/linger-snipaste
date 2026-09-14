@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Linger 截图",
+  "version": "0.1.0",
+  "identifier": "app.linger.snipaste",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Linger 截图",
+        "width": 420,
+        "height": 300,
+        "minWidth": 360,
+        "minHeight": 250,
+        "resizable": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "resources": ["../service/*.py"],
+    "icon": ["icons/icon.png"]
+  }
+}
