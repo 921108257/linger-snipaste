@@ -2,22 +2,31 @@
 
 Linux 桌面的 Snipaste 风格截图工具，当前面向 GNOME Wayland。
 
-**F1 → 冻结全屏 → 拖动框选 → 悬浮标注 → 复制 / 保存 / 贴图**。工具栏不占用图片布局，也不进入导出图片。
+**F1 → 系统截图 → 悬停识别容器 / 拖动框选 → 标注 → 复制 / 保存 / 贴图**。工具栏不进入导出图片。GNOME 的系统截图界面请选择“屏幕”以获得完整画面。
+
+应用登录后静默驻留托盘；从应用菜单启动或点击托盘“设置…”打开偏好设置。关闭设置窗口继续后台运行，托盘“退出”才结束进程。
+
+## 设置
+
+- 默认全局 F1 截图、F2 贴图，可点击快捷键字段录入新组合后保存；Backspace 清除，Esc 取消。GNOME 内置快捷键和其他应用的自定义快捷键冲突会报错并保留旧设置。
+- F2 在截图层内贴出当前选区，在其他位置贴出剪贴板图片。
+- 可关闭“自动识别容器区域”或“登录后自动启动”。设置保存在 `${XDG_CONFIG_HOME:-~/.config}/linger-snipaste/settings.json`。
+- 首次运行自动注册快捷键。非 GNOME 桌面可在系统快捷键设置中绑定 `/usr/bin/linger-snipaste --capture` 和 `/usr/bin/linger-snipaste --pin`。
 
 ## 操作
 
 - 框选后拖动选区内部移动裁剪范围，拖动八个边角控制点调整大小。方向键微调，Shift 加方向键移动 10 个屏幕像素。
-- 单击未框选的画面、Ctrl+A 或工具栏“选取全屏”选择整张画面。
+- 未框选时，鼠标悬停预览识别到的窗口内部容器区域；滚轮向下选更大的包围区域，向上选更小区域，单击确认。拖动始终使用自由框选。Ctrl+A 或工具栏“选取全屏”选择整张画面。
 - 添加文字后自动选中文字。拖动文字移动，拖动文字外围的控制点缩放；双击修改内容。Esc 取消选中，Delete 删除选中的标注。
 - 橡皮擦擦除画笔、形状、文字和马赛克等标注，保留截图原图；工具栏可调橡皮大小。
 - Ctrl+Z 撤销，Ctrl+Shift+Z 重做。Enter / Ctrl+C 复制完成，Ctrl+S 保存，F2 贴图，Esc 或右键取消。
-- “系统窗口截图”打开 GNOME 自带的截图选择器。选择窗口并完成系统确认后，进入标注层。它依赖桌面提供的交互模式；当前没有自定义的悬停窗口识别。
+- 容器识别使用 OpenCV 轮廓与多阈值表面检测，支持窗口内部面板、卡片和有明显边界的矩形元素，不依赖应用是否提供可访问性树。没有可见边界或复杂背景的区域可能无法识别，可拖动框选。
 
 ## 为什么系统仍可能显示“共享”或确认窗口
 
 旧版通过持续屏幕共享取帧，已改为每次向系统请求一张截图。现在没有常驻屏幕流，不需要先连接显示器，也不再用旧帧缓存。
 
-GNOME Wayland 限制普通应用直接读取其他窗口。应用通过系统 Screenshot Portal 请求截图，系统可能显示截图预览及“共享”按钮；这里表示把这一张截图交给本机应用，不是上传或链接分享。确认界面和出现频率由桌面系统决定，不能承诺免确认或毫秒级唤起。
+GNOME Wayland 限制普通应用直接读取其他窗口。v0.3.0 修复了后台应用无焦点时被系统拒绝授权的问题：在 GNOME 上直接使用交互 Screenshot Portal；其他桌面拒绝非交互请求时会重试交互模式。系统可能显示截图预览及“共享”按钮；这里表示把这一张截图交给本机应用，不是上传或链接分享。确认界面和出现频率由桌面系统决定，不能承诺免确认或毫秒级唤起。系统取消不会再打开错误窗口。
 
 已移除 Agent 集成、MCP、截图命令行接口和公开 socket/HTTP 截图接口。桌面应用仅通过父子进程私有管道调用系统组件。`--capture` 只为系统快捷键唤起可见截图界面，不输出图片或 JSON。
 
@@ -28,12 +37,12 @@ GNOME Wayland 限制普通应用直接读取其他窗口。应用通过系统 Sc
 从 [Releases](https://github.com/921108257/linger-snipaste/releases) 下载后：
 
 ```bash
-sudo apt install ./linger-snipaste_0.2.0_amd64.deb
+sudo apt install ./linger-snipaste_0.3.0_amd64.deb
 ```
 
-包内已附带 Python 后端及其依赖（`gi` / `dbus` / `PIL` / `cairo`），无需安装 `python3-gi` 等系统 Python 包；GTK 与 WebKitGTK 等系统库由 `apt` 依据 `Depends` 自动补齐。安装后应用随会话自启动并常驻托盘，按 F1 截图。
+包内已附带 Python 后端及依赖（`gi` / `dbus` / `PIL` / `cairo` / NumPy / OpenCV，包括 D-Bus 原生扩展），无需安装对应系统 Python 包；GTK、WebKitGTK、类型库和桌面 Portal 由 `apt` 依据 `Depends` 自动补齐。升级后从旧版托盘退出，再打开新版；已运行的旧进程不会自动替换。
 
-注册 GNOME 全局 F1（以桌面用户身份执行一次）：
+手动重新注册已保存的全局快捷键（可选，以桌面用户身份执行）：
 
 ```bash
 /usr/lib/linger-snipaste/install-shortcut.py
@@ -43,11 +52,13 @@ sudo apt install ./linger-snipaste_0.2.0_amd64.deb
 
 ```bash
 npm install && npm run build
+python3 -m pip install --target dist-deb/runtime -r service/requirements.txt
 cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/custom-protocol
-./scripts/build-deb.sh          # 产物：dist/linger-snipaste_0.2.0_amd64.deb
+./scripts/build-deb.sh          # 产物：dist/linger-snipaste_0.3.0_amd64.deb
+/usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.3.0_amd64
 ```
 
-包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制真实链接关系推导，新增系统库依赖会自动体现。包内 `gi` / `PIL` 含 `cpython-312` 扩展，因此锁定 Python 3.12（Ubuntu 24.04 默认版本）。
+包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制及 Python 扩展真实链接关系推导。包内扩展锁定 Python 3.12（Ubuntu 24.04 默认版本）。构建识别依赖也需使用 Python 3.12；没有 pip 时先安装 `python3-pip`。
 
 ### 从源码运行
 
@@ -57,6 +68,7 @@ cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/cust
 sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev librsvg2-dev \
   libayatana-appindicator3-dev python3-gi python3-dbus python3-pil gir1.2-gtk-3.0
 npm install
+python3 -m pip install --target dist-deb/runtime -r service/requirements.txt
 npm run desktop
 ```
 
@@ -68,7 +80,7 @@ cargo build --manifest-path src-tauri/Cargo.toml --features tauri/custom-protoco
 /usr/bin/python3 scripts/install-shortcut.py
 ```
 
-可执行文件位于 `src-tauri/target/debug/linger-snipaste`。F1 注册脚本保留其他已有快捷键；移动项目后需重新运行脚本。撤销注册可运行该脚本并加 `--remove`。F2 当前仅在应用和截图层内生效。
+可执行文件位于 `src-tauri/target/debug/linger-snipaste`。注册脚本保留其他已有快捷键；撤销注册可运行该脚本并加 `--remove`。`--background` 静默启动，`--settings` 打开设置。
 
 `npm run dev` 提供浏览器图片编辑预览；可通过“打开图片”导入本地文件。浏览器预览没有桌面截图通道，图片保存在该浏览器的 IndexedDB。开发时 `?sample=1` 可打开内置测试图。
 
@@ -81,6 +93,7 @@ npm run desktop:build # 原生构建，不生成安装包
 ## 当前边界
 
 - 单显示器为主要使用场景；多屏、分数缩放、KDE、X11 尚未完成验证。
+- 自动容器识别依据可见图像边界，不是 DOM/控件语义解析，也不保证识别所有元素。仅本机处理，没有远程图像服务。
 - 选区接近全屏时工具栏会浮在画面边缘；可编辑的截图尺寸不会缩小，导出不含工具栏。
 - 贴图支持缩放与透明度；是否允许置顶取决于窗口管理器。
 - 原图和编辑副本保存在 `${XDG_DATA_HOME:-~/.local/share}/linger-snipaste`，尚无自动清理策略。马赛克可被橡皮擦恢复为原图，请留意本地原始副本。

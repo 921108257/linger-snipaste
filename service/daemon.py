@@ -14,6 +14,7 @@ import dbus
 from dbus.mainloop.glib import DBusGMainLoop
 from capture import Capture
 from storage import Store, ServiceError
+from settings import Settings
 
 
 def on_main(callback):
@@ -41,12 +42,23 @@ class Worker:
         self.store = Store()
         self.capture = Capture(self.store, dbus.SessionBus())
         self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.settings = Settings()
 
     def dispatch(self, method, params):
         if method == 'status':
             return {'state': self.capture.state, 'backend': 'portal-screenshot'}
         if method == 'capture':
-            return self.capture.screenshot(bool(params.get('interactive', False)))
+            shot = self.capture.screenshot(bool(params.get('interactive', False)))
+            shot['auto_detect'] = self.settings.load()['autoDetect']
+            self.store.path(shot['id'], '.json').write_text(json.dumps(shot, ensure_ascii=False))
+            return shot
+        if method == 'detect_regions':
+            from detection import detect_regions
+            return detect_regions(self.store.path(params['id']).read_bytes())
+        if method == 'settings_get':
+            return self.settings.load()
+        if method in ('settings_save', 'settings_init'):
+            return on_main(lambda: self.settings.save(params if method == 'settings_save' else self.settings.load()))
         if method == 'metadata':
             return json.loads(self.store.path(params['id'], '.json').read_text())
         if method == 'image':
@@ -54,7 +66,8 @@ class Worker:
         if method == 'import':
             data = params['data'].split(',', 1)[-1]
             return self.store.save(base64.b64decode(data, validate=True), 'edited',
-                                   extra={'parent_id': params.get('parent_id')})
+                                   extra={'parent_id': params.get('parent_id'),
+                                          'auto_detect': self.settings.load()['autoDetect']})
         if method == 'clipboard':
             path = str(self.store.path(params['id']))
             def copy():

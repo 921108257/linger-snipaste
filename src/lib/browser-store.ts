@@ -22,6 +22,20 @@ export async function browserRpc(
   method: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
+  if (method === "settings_get" || method === "settings_save") {
+    const values = {
+      captureShortcut: "F1",
+      pinShortcut: "F2",
+      autoDetect: true,
+      autostart: true,
+      ...JSON.parse(localStorage.getItem("linger-preview-settings") || "{}"),
+      ...(method === "settings_save" ? params : {}),
+      shortcutsSupported: false,
+    };
+    if (method === "settings_save")
+      localStorage.setItem("linger-preview-settings", JSON.stringify(values));
+    return values;
+  }
   if (method === "status") return { state: "ready", backend: "image-preview" };
   if (method === "import") {
     const data = String(params.data);

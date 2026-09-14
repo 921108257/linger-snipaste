@@ -3,7 +3,7 @@
 # 系统库（GTK/WebKitGTK 等）按 Debian 惯例声明为依赖，由 apt 自动满足。
 set -euo pipefail
 
-VERSION="${VERSION:-0.2.0}"
+VERSION="${VERSION:-0.3.0}"
 MAINTAINER="${MAINTAINER:-921108257 <74404890+921108257@users.noreply.github.com>}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,6 +37,12 @@ for mod in gi dbus PIL cairo; do
   [ -e "$PY_DIST/$mod" ] || fail "系统缺少 $PY_DIST/$mod，请先安装 python3-gi python3-dbus python3-pil"
   cp -rL "$PY_DIST/$mod" "$PKG/usr/lib/linger-snipaste/vendor/"
 done
+for mod in _dbus_bindings _dbus_glib_bindings; do
+  install -m644 "$PY_DIST"/"$mod"*.so "$PKG/usr/lib/linger-snipaste/vendor/"
+done
+RUNTIME="${LINGER_VISION_RUNTIME:-$BUILD/runtime}"
+[ -d "$RUNTIME/cv2" ] && [ -d "$RUNTIME/numpy" ] || fail "请先用 Python 3.12 的 pip install --target dist-deb/runtime -r service/requirements.txt 安装识别依赖"
+cp -rL "$RUNTIME"/. "$PKG/usr/lib/linger-snipaste/vendor/"
 # 离线字节码缓存，加快首次启动
 /usr/bin/python3 -m compileall -q "$PKG/usr/lib/linger-snipaste/vendor" >/dev/null 2>&1 || true
 
@@ -57,12 +63,12 @@ ICON_SRC="$ROOT/src-tauri/icons/icon.png"
 [ -f "$ICON_SRC" ] || fail "找不到图标 $ICON_SRC"
 install -m644 "$ICON_SRC" "$PKG/usr/share/icons/hicolor/256x256/apps/linger-snipaste.png"
 
-cat > "$PKG/usr/share/applications/linger-snipaste.desktop" <<'DESKTOP'
+cat > "$PKG/usr/share/applications/app.linger.snipaste.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
 Name=Linger 截图
 Comment=Linux 桌面的 Snipaste 风格截图标注工具
-Exec=/usr/bin/linger-snipaste
+Exec=/usr/bin/linger-snipaste --settings
 Icon=linger-snipaste
 Terminal=false
 Categories=Graphics;
@@ -74,8 +80,8 @@ cat > "$PKG/etc/xdg/autostart/linger-snipaste.desktop" <<'AUTOSTART'
 [Desktop Entry]
 Type=Application
 Name=Linger 截图
-Comment=常驻托盘并注册 F1 截图
-Exec=/usr/bin/linger-snipaste
+Comment=常驻托盘并注册截图与贴图快捷键
+Exec=/usr/bin/linger-snipaste --background
 Icon=linger-snipaste
 Terminal=false
 X-GNOME-Autostart-enabled=true
@@ -96,9 +102,7 @@ Linger 截图已安装。
   * 命令：/usr/bin/linger-snipaste（已随会话自动启动并常驻托盘）
   * 截图：按 F1，或使用托盘菜单
 
-如需注册 GNOME 全局 F1 快捷键，请以桌面用户身份执行一次：
-
-  /usr/lib/linger-snipaste/install-shortcut.py
+打开 Linger 设置可以修改截图与贴图快捷键；启动应用时自动注册，保留其他应用的快捷键。
 
 MSG
 fi
@@ -130,13 +134,16 @@ echo "==> 计算并写入依赖"
 # dpkg-shlibdeps 依据二进制真实链接关系推导系统库依赖
 mkdir -p "$BUILD/debian"
 cp "$PKG/DEBIAN/control" "$BUILD/debian/control"
+mapfile -t PY_EXTENSIONS < <(rg --files --no-ignore "$PKG/usr/lib/linger-snipaste/vendor/gi" \
+  "$PKG/usr/lib/linger-snipaste/vendor/PIL" "$PKG/usr/lib/linger-snipaste/vendor/cairo" -g '*.so')
 SHLIB_DEPS="$(cd "$BUILD" && dpkg-shlibdeps -O \
-  "$PKG/usr/lib/linger-snipaste/linger-snipaste" \
+  "$PKG/usr/lib/linger-snipaste/linger-snipaste" "${PY_EXTENSIONS[@]}" \
+  "$PKG"/usr/lib/linger-snipaste/vendor/_dbus*.so \
   | sed -n 's/^shlibs:Depends=//p')"
 [ -n "$SHLIB_DEPS" ] || fail "dpkg-shlibdeps 未能推导出依赖"
 
 # 私有 Python 运行时 + 托盘库：dpkg-shlibdeps 不覆盖这两项
-DEPS="python3 (>= 3.12), python3 (<< 3.13), libayatana-appindicator3-1, ${SHLIB_DEPS}"
+DEPS="python3 (>= 3.12), python3 (<< 3.13), gir1.2-gtk-3.0, xdg-desktop-portal, xdg-desktop-portal-backend, libayatana-appindicator3-1, ${SHLIB_DEPS}"
 sed -i "s|^Depends: DEPENDS_PLACEHOLDER|Depends: ${DEPS}|" "$PKG/DEBIAN/control"
 
 INSTALLED_SIZE="$(du -sk "$PKG" | cut -f1)"

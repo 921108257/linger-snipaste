@@ -12,6 +12,7 @@ export interface Shot {
   sha256: string;
   path: string;
   thumbnail: string;
+  auto_detect?: boolean;
 }
 export interface Status {
   state: "ready" | "requesting";
