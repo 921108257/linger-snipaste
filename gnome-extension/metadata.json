@@ -1,0 +1,8 @@
+{
+  "uuid": "capture@linger-snipaste",
+  "name": "Linger Direct Capture",
+  "description": "Enables one-shot desktop capture for the Linger screenshot app without opening GNOME's screenshot selector. No recording or network access.",
+  "shell-version": ["46"],
+  "version": 1,
+  "url": "https://github.com/921108257/linger-snipaste"
+}

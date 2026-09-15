@@ -8,6 +8,7 @@ from urllib.parse import unquote, urlsplit
 import dbus
 from gi.repository import GLib
 from storage import ServiceError
+from desktop import DesktopCapture
 
 
 def read_uri(uri):
@@ -25,19 +26,18 @@ class Capture:
         self.store = store
         self.bus = bus
         self.state = 'ready'
+        self.desktop = DesktopCapture(store, bus)
 
     def screenshot(self, interactive=False):
-        # GNOME only grants noninteractive access dialogs to the focused app.
-        # Our pipe worker has no focused window, and the UI is hidden to avoid
-        # capturing itself. Its supported interactive portal bypasses that dialog.
         gnome = 'gnome' in os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
-        try:
-            return self._request(interactive or gnome)
-        except ServiceError as exc:
-            if exc.code != 'CAPTURE_FAILED' or interactive or gnome:
-                raise
-            # Other portal backends may also deny a background access request.
-            return self._request(True)
+        if gnome and not interactive:
+            self.state = 'requesting'
+            try:
+                return self.desktop.screenshot()
+            finally:
+                self.state = 'ready'
+        # Compatibility is explicit. Never silently open a second selector.
+        return self._request(interactive)
 
     def _request(self, interactive):
         done = threading.Event()
@@ -52,7 +52,8 @@ class Capture:
             else:
                 outcome['error'] = ServiceError('CANCELLED' if int(code) == 1 else 'CAPTURE_FAILED',
                                                 '已取消截图。' if int(code) == 1 else
-                                                '系统截图服务拒绝了请求。请检查系统截图功能与桌面 Portal 服务是否正常。')
+                                                ('系统截图未返回图片。可能已取消或截图未完成。' if interactive else
+                                                 '系统未允许直接截图，请检查桌面截图权限。'))
             done.set()
 
         def start():
