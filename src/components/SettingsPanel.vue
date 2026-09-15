@@ -316,6 +316,6 @@ onMounted(async () => {
         {{ saving ? "保存中…" : "保存设置" }}
       </button>
     </footer>
-    <p class="settings-version">Linger 截图 0.4.0</p>
+    <p class="settings-version">Linger 截图 0.4.1</p>
   </main>
 </template>
