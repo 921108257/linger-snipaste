@@ -2,7 +2,7 @@
 
 Linux 桌面的 Snipaste 风格截图工具，当前面向 GNOME Wayland。
 
-**F1 → 系统截图 → 悬停识别容器 / 拖动框选 → 标注 → 复制 / 保存 / 贴图**。工具栏不进入导出图片。GNOME 的系统截图界面请选择“屏幕”以获得完整画面。
+**F1 → Linger 选区 → 悬停识别容器 / 拖动框选 → 标注 → 复制 / 保存 / 贴图**。启用配套 GNOME 扩展后只取一张图，不再打开第二个系统选区面板。工具栏不进入导出图片。
 
 应用登录后静默驻留托盘；从应用菜单启动或点击托盘“设置…”打开偏好设置。关闭设置窗口继续后台运行，托盘“退出”才结束进程。
 
@@ -12,6 +12,8 @@ Linux 桌面的 Snipaste 风格截图工具，当前面向 GNOME Wayland。
 - F2 在截图层内贴出当前选区，在其他位置贴出剪贴板图片。
 - 可关闭“自动识别容器区域”或“登录后自动启动”。设置保存在 `${XDG_CONFIG_HOME:-~/.config}/linger-snipaste/settings.json`。
 - 首次运行自动注册快捷键。非 GNOME 桌面可在系统快捷键设置中绑定 `/usr/bin/linger-snipaste --capture` 和 `/usr/bin/linger-snipaste --pin`。
+- GNOME 46 的安装包包含 `capture@linger-snipaste` 扩展。首次安装后在设置中点击“启用直接截图”，然后注销并重新登录一次。扩展只允许 Linger 的后台子进程读取单张屏幕图，锁屏时拒绝截图。
+- 设置窗口没有系统标题栏，可拖动内部标题区移动。“收起到托盘”位于“保存设置”左侧；配套扩展同时提供窗口背后的磨砂模糊。
 
 ## 操作
 
@@ -22,13 +24,13 @@ Linux 桌面的 Snipaste 风格截图工具，当前面向 GNOME Wayland。
 - Ctrl+Z 撤销，Ctrl+Shift+Z 重做。Enter / Ctrl+C 复制完成，Ctrl+S 保存，F2 贴图，Esc 或右键取消。
 - 容器识别使用 OpenCV 轮廓与多阈值表面检测，支持窗口内部面板、卡片和有明显边界的矩形元素，不依赖应用是否提供可访问性树。没有可见边界或复杂背景的区域可能无法识别，可拖动框选。
 
-## 为什么系统仍可能显示“共享”或确认窗口
+## 桌面截图通道
 
 旧版通过持续屏幕共享取帧，已改为每次向系统请求一张截图。现在没有常驻屏幕流，不需要先连接显示器，也不再用旧帧缓存。
 
-GNOME Wayland 限制普通应用直接读取其他窗口。v0.3.0 修复了后台应用无焦点时被系统拒绝授权的问题：在 GNOME 上直接使用交互 Screenshot Portal；其他桌面拒绝非交互请求时会重试交互模式。系统可能显示截图预览及“共享”按钮；这里表示把这一张截图交给本机应用，不是上传或链接分享。确认界面和出现频率由桌面系统决定，不能承诺免确认或毫秒级唤起。系统取消不会再打开错误窗口。
+GNOME Wayland 不允许普通应用无授权直接截屏。v0.3.0 为处理焦点拒绝而使用交互 Portal，导致先系统选区、后 Linger 选区。v0.4.0 改为显式启用的 GNOME 扩展一次取图，未启用时提示设置，不偷偷回退到系统选区。其他桌面保留非交互 Portal 兼容路径，实际授权由桌面决定。
 
-已移除 Agent 集成、MCP、截图命令行接口和公开 socket/HTTP 截图接口。桌面应用仅通过父子进程私有管道调用系统组件。`--capture` 只为系统快捷键唤起可见截图界面，不输出图片或 JSON。
+已移除 Agent 集成、MCP、截图命令行接口和公开 socket/HTTP 截图接口。桌面应用通过父子进程私有管道调用后端，GNOME 扩展的 D-Bus 接口核验调用进程和 Linger 父进程。`--capture` 只为系统快捷键唤起可见截图界面，不输出图片或 JSON。
 
 ## 运行与构建
 
@@ -37,7 +39,7 @@ GNOME Wayland 限制普通应用直接读取其他窗口。v0.3.0 修复了后�
 从 [Releases](https://github.com/921108257/linger-snipaste/releases) 下载后：
 
 ```bash
-sudo apt install ./linger-snipaste_0.3.0_amd64.deb
+sudo apt install ./linger-snipaste_0.4.0_amd64.deb
 ```
 
 包内已附带 Python 后端及依赖（`gi` / `dbus` / `PIL` / `cairo` / NumPy / OpenCV，包括 D-Bus 原生扩展），无需安装对应系统 Python 包；GTK、WebKitGTK、类型库和桌面 Portal 由 `apt` 依据 `Depends` 自动补齐。升级后从旧版托盘退出，再打开新版；已运行的旧进程不会自动替换。
@@ -54,8 +56,8 @@ sudo apt install ./linger-snipaste_0.3.0_amd64.deb
 npm install && npm run build
 python3 -m pip install --target dist-deb/runtime -r service/requirements.txt
 cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/custom-protocol
-./scripts/build-deb.sh          # 产物：dist-deb/releases/linger-snipaste_0.3.0_amd64.deb
-/usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.3.0_amd64
+./scripts/build-deb.sh          # 产物：dist-deb/releases/linger-snipaste_0.4.0_amd64.deb
+/usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.4.0_amd64
 ```
 
 包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制及 Python 扩展真实链接关系推导。包内扩展锁定 Python 3.12（Ubuntu 24.04 默认版本）。构建识别依赖也需使用 Python 3.12；没有 pip 时先安装 `python3-pip`。

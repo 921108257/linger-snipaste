@@ -103,31 +103,34 @@ class CoreTests(unittest.TestCase):
         self.assertTrue(bus.removed and bus.closed)
 
     @patch.dict(os.environ, {'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME'})
-    @patch('capture.GLib.idle_add', side_effect=lambda callback: callback())
-    @patch('capture.dbus.Interface', side_effect=lambda proxy, interface: proxy)
-    def test_gnome_uses_interactive_portal_for_background_capture(self, *_):
-        file = Path(self.temp.name) / 'portal.png'; file.write_bytes(self.png)
-        bus = FakeBus(file.as_uri())
-        Capture(self.store, bus).screenshot()
-        self.assertTrue(bus.options['interactive'])
+    def test_gnome_direct_capture_never_opens_portal_selector(self):
+        cap = Capture(self.store, FakeBus(''))
+        with patch.object(cap.desktop, 'screenshot', return_value={'id': 'test'}) as direct, patch.object(cap, '_request') as portal:
+            self.assertEqual(cap.screenshot(), {'id': 'test'})
+            direct.assert_called_once()
+            portal.assert_not_called()
+        self.assertEqual(cap.state, 'ready')
+        with patch.object(cap.desktop, 'screenshot', side_effect=ServiceError('DIRECT_CAPTURE_UNAVAILABLE', 'enable extension')), patch.object(cap, '_request') as portal:
+            with self.assertRaises(ServiceError): cap.screenshot()
+            portal.assert_not_called()
+        self.assertEqual(cap.state, 'ready')
 
     @patch('capture.GLib.idle_add', side_effect=lambda callback: callback())
     @patch('capture.dbus.Interface', side_effect=lambda proxy, interface: proxy)
-    def test_noninteractive_failure_retries_once_but_cancel_never_retries(self, *_):
-        file = Path(self.temp.name) / 'portal.png'; file.write_bytes(self.png)
-        bus = FakeBus(file.as_uri(), code=2)
-        original = bus.Screenshot
-        attempts = []
-        def request(parent, options):
-            attempts.append(bool(options['interactive']))
-            if options['interactive']: bus.code = 0
-            return original(parent, options)
-        bus.Screenshot = request
-        Capture(self.store, bus).screenshot()
-        self.assertEqual(attempts, [False, True])
-        attempts.clear(); bus.code = 1
-        with self.assertRaises(ServiceError): Capture(self.store, bus).screenshot()
-        self.assertEqual(attempts, [False])
+    def test_portal_failure_does_not_silently_retry_interactive_mode(self, *_):
+        bus = FakeBus('', code=2)
+        with patch.object(bus, 'Screenshot', wraps=bus.Screenshot) as screenshot:
+            with self.assertRaises(ServiceError): Capture(self.store, bus).screenshot()
+            self.assertEqual(screenshot.call_count, 1)
+            self.assertFalse(bus.options['interactive'])
+
+    @patch('capture.GLib.idle_add', side_effect=lambda callback: callback())
+    @patch('capture.dbus.Interface', side_effect=lambda proxy, interface: proxy)
+    def test_interactive_empty_result_does_not_claim_permission_denied(self, *_):
+        with self.assertRaises(ServiceError) as error:
+            Capture(self.store, FakeBus('', code=2)).screenshot(interactive=True)
+        self.assertIn('未返回图片', str(error.exception))
+        self.assertNotIn('拒绝', str(error.exception))
 
     def test_private_worker_status_rejects_old_commands_and_exits_on_eof(self):
         worker = Path(__file__).resolve().parents[1] / 'service/daemon.py'

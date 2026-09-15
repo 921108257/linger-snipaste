@@ -15,6 +15,7 @@ interface Preferences {
   autostart: boolean;
   shortcutsSupported: boolean;
   warning?: string;
+  directCapture?: { state: string; message: string };
 }
 const values = ref<Preferences>({
   captureShortcut: "F1",
@@ -29,7 +30,32 @@ const saved = ref(""),
   loading = ref(true),
   saving = ref(false);
 const recording = ref<"captureShortcut" | "pinShortcut" | null>(null);
+const enabling = ref(false);
+const directCapture = ref<Preferences["directCapture"]>();
 const dirty = computed(() => JSON.stringify(values.value) !== saved.value);
+async function enableDirectCapture() {
+  enabling.value = true;
+  failure.value = "";
+  try {
+    directCapture.value = await rpc("enable_direct_capture");
+    if (directCapture.value?.state === "enabling") {
+      const loaded = await rpc<Preferences>("settings_get");
+      directCapture.value = loaded.directCapture;
+    }
+  } catch (e) {
+    failure.value = String(e);
+  } finally {
+    enabling.value = false;
+  }
+}
+function dragWindow(event: PointerEvent) {
+  if (
+    native &&
+    event.button === 0 &&
+    !(event.target as HTMLElement).closest("button")
+  )
+    getCurrentWindow().startDragging();
+}
 let unlisten: undefined | (() => void),
   disposed = false;
 watch(recording, (value) => {
@@ -131,6 +157,8 @@ onMounted(async () => {
       unlisten = stop;
     }
     values.value = await rpc<Preferences>("settings_get");
+    directCapture.value = values.value.directCapture;
+    delete values.value.directCapture;
     failure.value = values.value.warning || "";
     saved.value = JSON.stringify(values.value);
   } catch (e) {
@@ -143,7 +171,7 @@ onMounted(async () => {
 
 <template>
   <main class="settings-page">
-    <header class="settings-heading">
+    <header class="settings-heading" @pointerdown="dragWindow">
       <div class="settings-mark"><Crop :size="25" aria-hidden="true" /></div>
       <div>
         <h1>Linger 设置</h1>
@@ -190,6 +218,37 @@ onMounted(async () => {
     <section aria-labelledby="capture-heading">
       <h2 id="capture-heading"><Scan :size="17" aria-hidden="true" />截图</h2>
       <div class="settings-group">
+        <div
+          v-if="
+            native && directCapture && directCapture.state !== 'unsupported'
+          "
+          class="capture-setup"
+        >
+          <div>
+            <h3>直接进入截图</h3>
+            <p>{{ directCapture.message }}</p>
+            <p v-if="['disabled', 'needs-login'].includes(directCapture.state)">
+              启用 Linger 桌面扩展，允许应用读取单次屏幕截图。
+            </p>
+          </div>
+          <button
+            v-if="
+              ['disabled', 'needs-login', 'enabling'].includes(
+                directCapture.state,
+              )
+            "
+            class="secondary compact"
+            :disabled="enabling"
+            @click="enableDirectCapture"
+          >
+            {{ enabling ? "启用中…" : "启用直接截图" }}
+          </button>
+          <span
+            v-else-if="directCapture.state === 'ready'"
+            class="capture-ready"
+            >已就绪</span
+          >
+        </div>
         <label class="setting-row"
           ><div>
             <h3>自动识别容器区域</h3>
@@ -227,7 +286,7 @@ onMounted(async () => {
       <p v-if="error || failure" class="settings-error" role="alert">
         {{ error || failure }}
       </p>
-      <p v-else-if="busy">请在系统截图界面选择屏幕并完成截图…</p>
+      <p v-else-if="busy">正在截取屏幕…</p>
       <p v-else-if="message || result">{{ message || result }}</p>
       <p v-else-if="dirty && !loading">有未保存的更改</p>
     </div>
@@ -243,6 +302,13 @@ onMounted(async () => {
         <FolderOpen :size="15" aria-hidden="true" />打开图片
       </button>
       <button
+        v-if="native"
+        class="secondary compact settings-hide"
+        @click="getCurrentWindow().hide()"
+      >
+        收起到托盘
+      </button>
+      <button
         class="primary"
         :disabled="loading || saving || !dirty || !!recording"
         @click="save"
@@ -250,11 +316,6 @@ onMounted(async () => {
         {{ saving ? "保存中…" : "保存设置" }}
       </button>
     </footer>
-    <p class="settings-version">
-      Linger 截图 0.3.0
-      <button v-if="native" @click="getCurrentWindow().hide()">
-        收起到托盘
-      </button>
-    </p>
+    <p class="settings-version">Linger 截图 0.4.0</p>
   </main>
 </template>

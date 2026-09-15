@@ -137,6 +137,7 @@ async fn rpc(app: tauri::AppHandle, method: String, params: Value) -> Result<Val
         "settings_get",
         "settings_save",
         "detect_regions",
+        "enable_direct_capture",
     ]
     .contains(&method.as_str())
     {
@@ -183,7 +184,7 @@ async fn launch_capture(app: tauri::AppHandle, interactive: bool) -> Result<(), 
     // Allow the compositor to remove our launcher before requesting the desktop pixels.
     let worker_app = app.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(350));
         worker_app
             .state::<Service>()
             .call("capture", json!({"interactive":interactive}))

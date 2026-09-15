@@ -3,7 +3,7 @@
 # 系统库（GTK/WebKitGTK 等）按 Debian 惯例声明为依赖，由 apt 自动满足。
 set -euo pipefail
 
-VERSION="${VERSION:-0.3.0}"
+VERSION="${VERSION:-0.4.0}"
 MAINTAINER="${MAINTAINER:-921108257 <74404890+921108257@users.noreply.github.com>}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -26,6 +26,7 @@ install -d "$PKG/DEBIAN" \
   "$PKG/usr/lib/linger-snipaste/service" \
   "$PKG/usr/lib/linger-snipaste/vendor" \
   "$PKG/usr/share/applications" \
+  "$PKG/usr/share/gnome-shell/extensions/capture@linger-snipaste" \
   "$PKG/usr/share/icons/hicolor/256x256/apps" \
   "$PKG/etc/xdg/autostart"
 
@@ -33,6 +34,7 @@ echo "==> 安装主程序与后端"
 install -m755 "$BIN_SRC" "$PKG/usr/lib/linger-snipaste/linger-snipaste"
 install -m644 "$ROOT"/service/*.py "$PKG/usr/lib/linger-snipaste/service/"
 install -m755 "$ROOT/scripts/install-shortcut.py" "$PKG/usr/lib/linger-snipaste/install-shortcut.py"
+install -m644 "$ROOT"/gnome-extension/{extension.js,metadata.json} "$PKG/usr/share/gnome-shell/extensions/capture@linger-snipaste/"
 
 echo "==> 复制 Python 依赖（gi / dbus / PIL / cairo）"
 for mod in gi dbus PIL cairo; do
@@ -101,8 +103,11 @@ if [ "$1" = "configure" ]; then
 
 Linger 截图已安装。
 
-  * 命令：/usr/bin/linger-snipaste（已随会话自动启动并常驻托盘）
+  * 命令：/usr/bin/linger-snipaste（下次登录自动启动并常驻托盘）
   * 截图：按 F1，或使用托盘菜单
+
+首次安装 GNOME 46 桌面扩展：先退出旧版，打开新版设置，点击“启用直接截图”，
+然后注销并重新登录一次，让桌面加载新扩展。
 
 打开 Linger 设置可以修改截图与贴图快捷键；启动应用时自动注册，保留其他应用的快捷键。
 

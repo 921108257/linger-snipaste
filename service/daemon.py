@@ -56,7 +56,9 @@ class Worker:
             from detection import detect_regions
             return detect_regions(self.store.path(params['id']).read_bytes())
         if method == 'settings_get':
-            return self.settings.load()
+            return {**self.settings.load(), 'directCapture': self.capture.desktop.status()}
+        if method == 'enable_direct_capture':
+            return on_main(self.capture.desktop.enable)
         if method in ('settings_save', 'settings_init'):
             return on_main(lambda: self.settings.save(params if method == 'settings_save' else self.settings.load()))
         if method == 'metadata':
