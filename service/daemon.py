@@ -9,7 +9,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 gi.require_version('GdkPixbuf', '2.0')
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
 from capture import Capture
@@ -71,12 +71,7 @@ class Worker:
                                    extra={'parent_id': params.get('parent_id'),
                                           'auto_detect': self.settings.load()['autoDetect']})
         if method == 'clipboard':
-            path = str(self.store.path(params['id']))
-            def copy():
-                self.clipboard.set_image(GdkPixbuf.Pixbuf.new_from_file(path))
-                self.clipboard.store()
-            on_main(copy)
-            return {'copied': True}
+            raise ServiceError('NATIVE_CLIPBOARD_REQUIRED', '请由截图窗口写入系统剪贴板。')
         if method == 'import_clipboard':
             def read():
                 pixbuf = self.clipboard.wait_for_image()

@@ -3,7 +3,7 @@
 # 系统库（GTK/WebKitGTK 等）按 Debian 惯例声明为依赖，由 apt 自动满足。
 set -euo pipefail
 
-VERSION="${VERSION:-0.4.0}"
+VERSION="${VERSION:-0.4.1}"
 MAINTAINER="${MAINTAINER:-921108257 <74404890+921108257@users.noreply.github.com>}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

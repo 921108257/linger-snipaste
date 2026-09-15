@@ -1,3 +1,26 @@
+# v0.4.1 剪贴板验证
+
+2026-09-15，GNOME 46 Wayland。用户报告点击“复制并完成”后不能粘贴。
+
+旧版 Python GTK worker 没有窗口和输入焦点，向 Wayland 设置 selection 时缺少对应输入序号。`set_image()` 无返回值，后端仍无条件返回 `copied: true`。该问题在隔离桌面中复现：后台进程返回成功，独立 GTK 接收进程得到空图片。
+
+新版在原生窗口的 GTK 主线程上提供 `image/png`，先检查窗口焦点及 GTK 接管结果，再结束选区。图片保存在剪贴板回调中，由常驻桌面进程提供，不随截图窗口关闭而释放。后台写入接口明确报错，避免旧路径误用。
+
+```bash
+cargo build --manifest-path src-tauri/Cargo.toml --example clipboard_probe
+/usr/bin/python3 scripts/check-clipboard.py
+```
+
+`clipboard_probe` 使用产品的同一剪贴板函数。脚本启动独立 D-Bus、临时 GNOME 46 桌面和虚拟键盘设备，不改变用户会话的剪贴板或输入。验证结果：
+
+- 旧无窗口 worker 返回成功，但独立接收应用没有图片。
+- 新实现连续两次复制 73×41 的不同图像并关闭源窗口，接收进程读取到匹配的尺寸和像素。
+- 未显示、无焦点的窗口调用被拒绝。
+- 前端测试确认复制请求成功前不会关闭选区，失败时选区保留并显示错误。
+- 15 项 Python、10 项 Vue/TypeScript 测试通过，前端和 Rust release 构建及严格 Clippy 通过。
+
+此测试验证实际 GNOME 剪贴板和跨进程读取；不等同于用户在所有目标应用中的物理粘贴验证。源窗口关闭后应用仍需后台运行，退出整个应用后的持久化由桌面剪贴板管理器决定。
+
 # v0.4.0 验证记录
 
 2026-09-15，Ubuntu 24.04 / GNOME 46 Wayland。

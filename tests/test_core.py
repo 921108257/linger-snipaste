@@ -134,13 +134,14 @@ class CoreTests(unittest.TestCase):
 
     def test_private_worker_status_rejects_old_commands_and_exits_on_eof(self):
         worker = Path(__file__).resolve().parents[1] / 'service/daemon.py'
-        requests = '\n'.join(json.dumps({'method': m}) for m in ('status', 'snapshot', 'start', 'history')) + '\n'
+        requests = '\n'.join(json.dumps({'method': m}) for m in ('status', 'snapshot', 'start', 'history', 'clipboard')) + '\n'
         output = subprocess.run(['/usr/bin/python3', str(worker)], input=requests, text=True, capture_output=True,
                                 timeout=15, env={**os.environ, 'XDG_DATA_HOME': self.temp.name})
         self.assertEqual(output.returncode, 0, output.stderr)
         responses = [json.loads(line) for line in output.stdout.splitlines()]
         self.assertEqual(responses[0]['result']['backend'], 'portal-screenshot')
-        for response in responses[1:]: self.assertEqual(response['error']['code'], 'UNKNOWN_METHOD')
+        for response in responses[1:4]: self.assertEqual(response['error']['code'], 'UNKNOWN_METHOD')
+        self.assertEqual(responses[4]['error']['code'], 'NATIVE_CLIPBOARD_REQUIRED')
 
 
 if __name__ == '__main__': unittest.main()

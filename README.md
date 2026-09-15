@@ -21,6 +21,7 @@ Linux 桌面的 Snipaste 风格截图工具，当前面向 GNOME Wayland。
 - 未框选时，鼠标悬停预览识别到的窗口内部容器区域；滚轮向下选更大的包围区域，向上选更小区域，单击确认。拖动始终使用自由框选。Ctrl+A 或工具栏“选取全屏”选择整张画面。
 - 添加文字后自动选中文字。拖动文字移动，拖动文字外围的控制点缩放；双击修改内容。Esc 取消选中，Delete 删除选中的标注。
 - 橡皮擦擦除画笔、形状、文字和马赛克等标注，保留截图原图；工具栏可调橡皮大小。
+- v0.4.1 起，图片由原生窗口进程写入剪贴板，关闭截图选区后仍可粘贴到其他应用；失败会保留选区并显示错误。
 - Ctrl+Z 撤销，Ctrl+Shift+Z 重做。Enter / Ctrl+C 复制完成，Ctrl+S 保存，F2 贴图，Esc 或右键取消。
 - 容器识别使用 OpenCV 轮廓与多阈值表面检测，支持窗口内部面板、卡片和有明显边界的矩形元素，不依赖应用是否提供可访问性树。没有可见边界或复杂背景的区域可能无法识别，可拖动框选。
 
@@ -39,7 +40,7 @@ GNOME Wayland 不允许普通应用无授权直接截屏。v0.3.0 为处理焦�
 从 [Releases](https://github.com/921108257/linger-snipaste/releases) 下载后：
 
 ```bash
-sudo apt install ./linger-snipaste_0.4.0_amd64.deb
+sudo apt install ./linger-snipaste_0.4.1_amd64.deb
 ```
 
 包内已附带 Python 后端及依赖（`gi` / `dbus` / `PIL` / `cairo` / NumPy / OpenCV，包括 D-Bus 原生扩展），无需安装对应系统 Python 包；GTK、WebKitGTK、类型库和桌面 Portal 由 `apt` 依据 `Depends` 自动补齐。升级后从旧版托盘退出，再打开新版；已运行的旧进程不会自动替换。
@@ -56,8 +57,8 @@ sudo apt install ./linger-snipaste_0.4.0_amd64.deb
 npm install && npm run build
 python3 -m pip install --target dist-deb/runtime -r service/requirements.txt
 cargo build --manifest-path src-tauri/Cargo.toml --release --features tauri/custom-protocol
-./scripts/build-deb.sh          # 产物：dist-deb/releases/linger-snipaste_0.4.0_amd64.deb
-/usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.4.0_amd64
+./scripts/build-deb.sh          # 产物：dist-deb/releases/linger-snipaste_0.4.1_amd64.deb
+/usr/bin/python3 scripts/check-package.py dist-deb/linger-snipaste_0.4.1_amd64
 ```
 
 包的 `Depends` 由 `dpkg-shlibdeps` 依据二进制及 Python 扩展真实链接关系推导。包内扩展锁定 Python 3.12（Ubuntu 24.04 默认版本）。构建识别依赖也需使用 Python 3.12；没有 pip 时先安装 `python3-pip`。

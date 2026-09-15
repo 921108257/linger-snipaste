@@ -89,6 +89,36 @@ afterEach(() => {
 });
 
 describe("screenshot interaction", () => {
+  it("keeps the overlay open until the clipboard write succeeds", async () => {
+    let complete!: (value: unknown) => void;
+    rpc.mockImplementation((method) =>
+      method === "import"
+        ? Promise.resolve({ id: "edited", width: 700, height: 400 })
+        : new Promise((resolve) => {
+            complete = resolve;
+          }),
+    );
+    await clickTool("复制并完成 Enter");
+    await vi.waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith("clipboard", { id: "edited" }),
+    );
+    expect(wrapper.emitted("close")).toBeUndefined();
+    complete({ copied: true });
+    await vi.waitFor(() => expect(wrapper.emitted("close")).toHaveLength(1));
+  });
+  it("preserves the selection and shows clipboard failures", async () => {
+    rpc.mockImplementation((method) =>
+      method === "import"
+        ? Promise.resolve({ id: "edited" })
+        : Promise.reject(new Error("系统剪贴板写入失败")),
+    );
+    await clickTool("复制并完成 Enter");
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("系统剪贴板写入失败"),
+    );
+    expect(wrapper.emitted("close")).toBeUndefined();
+    expect(box()).toEqual([100, 100, 700, 400]);
+  });
   it("hovers nested containers, cycles to a parent, and exports the clicked container", async () => {
     wrapper.unmount();
     wrapper = mount(CaptureOverlay, {

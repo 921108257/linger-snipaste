@@ -1,4 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod clipboard;
+use base64::Engine;
 use serde_json::{json, Value};
 use std::{
     io::{BufRead, BufReader, Write},
@@ -126,13 +128,42 @@ async fn call(app: tauri::AppHandle, method: String, params: Value) -> Result<Va
         .map_err(|e| e.to_string())?
 }
 #[tauri::command]
-async fn rpc(app: tauri::AppHandle, method: String, params: Value) -> Result<Value, String> {
+async fn rpc(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    method: String,
+    params: Value,
+) -> Result<Value, String> {
+    if method == "clipboard" {
+        let image = call(app.clone(), "image".into(), params).await?;
+        let data = image["data"]
+            .as_str()
+            .and_then(|data| data.strip_prefix("data:image/png;base64,"))
+            .ok_or("无法读取待复制的图片")?;
+        let png = base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .map_err(|e| e.to_string())?;
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            let result = window
+                .gtk_window()
+                .map_err(|e| e.to_string())
+                .and_then(|window| clipboard::copy_png(&window, png));
+            let _ = sender.send(result);
+        })
+        .map_err(|e| e.to_string())?;
+        tauri::async_runtime::spawn_blocking(move || {
+            receiver.recv().map_err(|_| "剪贴板操作中断".to_string())?
+        })
+        .await
+        .map_err(|e| e.to_string())??;
+        return Ok(json!({"copied": true}));
+    }
     if ![
         "status",
         "metadata",
         "image",
         "import",
-        "clipboard",
         "import_clipboard",
         "settings_get",
         "settings_save",
